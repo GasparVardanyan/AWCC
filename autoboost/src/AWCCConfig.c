@@ -17,6 +17,18 @@ const struct AWCCConfig_t AWCCDefaultConfig = {
 
 	.SuperBoostConfig = {
 		.BoostEqualizationZoneMax = 8,
+		.ShiftToLower = {
+			[AWCCFanCPU] = {
+				.PendingTime = 5,
+				.Time = 10,
+				.IntervalOffset = 2,
+			},
+			[AWCCFanGPU] = {
+				.PendingTime = 5,
+				.Time = 10,
+				.IntervalOffset = 2,
+			},
+		},
 	},
 
 	.FanConfigs = {

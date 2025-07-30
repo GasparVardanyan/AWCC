@@ -28,6 +28,7 @@ different conditions for upboosting and downboosting)
 - [ ] client-daemon connection via unix sockets
 - [ ] super boost: fans help each other
 - [ ] take care about the other components too: ram, nvme, etc (use lm_sensors' sensors.h to read temps and critical temps)
+- [ ] some renamings needed
 
 ## deprecated
 
