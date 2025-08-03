@@ -243,18 +243,26 @@ void ManageSuperBoost (void)
 		, fanInfos [AWCCFanCPU].boostIntervalByTemperature
 	);
 
-	int equalizedBoost = AWCCUtils_MinInt (
+	int minBoostToSet = AWCCUtils_MinInt (
 		  Internal.Config->SuperBoostConfig.BoostEqualizationZoneMax
 		, maxBoostInterval
 	);
 
-	Internal.BoostInfos [AWCCFanCPU].BoostIntervalToSet = AWCCUtils_MaxInt (
-		fanInfos [AWCCFanCPU].boostIntervalByTemperature, equalizedBoost
-	);
+	for (int j = 0; j < 2; j++) {
+		enum AWCCFan_t fan = fans [j];
 
-	Internal.BoostInfos [AWCCFanGPU].BoostIntervalToSet = AWCCUtils_MaxInt (
-		fanInfos [AWCCFanCPU].boostIntervalByTemperature, equalizedBoost
-	);
+		if (fanInfos [fan].boostIntervalByTemperature < minBoostToSet) {
+			Internal.BoostInfos [fan].BoostPhase = AWCCBoostPhaseHelping;
+			Internal.SetFanBoost (fan, minBoostToSet, AWCCBoostPhaseHelping);
+		}
+		else {
+			if (AWCCBoostPhaseHelping == Internal.BoostInfos [fan].BoostPhase) {
+				Internal.SetFanBoost (fan, fanInfos [fan].boostIntervalByTemperature, AWCCBoostPhaseHelping);
+			}
+
+			Internal.BoostInfos [fan].BoostIntervalToSet = fanInfos [fan].boostIntervalByTemperature;
+		}
+	}
 }
 
 void ManageFanBoost (enum AWCCFan_t fan)
