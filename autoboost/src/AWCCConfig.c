@@ -19,13 +19,13 @@ const struct AWCCConfig_t AWCCDefaultConfig = {
 		.BoostEqualizationZoneMax = 8,
 		.ShiftToLower = {
 			[AWCCFanCPU] = {
-				.PendingTime = 20,
-				.Time = 20,
+				.PendingTime = 60,
+				.Time = 30,
 				.IntervalOffset = 3,
 			},
 			[AWCCFanGPU] = {
-				.PendingTime = 20,
-				.Time = 20,
+				.PendingTime = 60,
+				.Time = 30,
 				.IntervalOffset = 3,
 			},
 		},

@@ -13,12 +13,6 @@
 # error this tool currently depends on threads.h
 # endif // __STDC_NO_THREADS__
 
-// # define DRY_RUN
-
-# ifdef ENABLE_LOGS
-# include <stdio.h>
-# endif // ENABLE_LOGS
-
 static void Start (const struct AWCCConfig_t *, const struct AWCCConfig_t *, const struct AWCCSystemLogger_t *, const struct AWCCControl_t *);
 
 const struct AWCCAutoBoost_t AWCCAutoBoost = {
@@ -39,6 +33,8 @@ static void ManageMode (void);
 static void SetFanBoost (enum AWCCFan_t, int, enum AWCCBoostPhase_t);
 static void SetMode (int);
 static void HandleControl (void);
+static void ResetBoostInfo (enum AWCCFan_t);
+static void ResetModeInfo (void);
 
 struct {
 	const struct AWCCConfig_t * Config;
@@ -94,6 +90,8 @@ struct {
 	void (* SetFanBoost) (enum AWCCFan_t, int, enum AWCCBoostPhase_t);
 	void (* SetMode) (int);
 	void (* HandleControl) (void);
+	void (* ResetBoostInfo) (enum AWCCFan_t fan);
+	void (* ResetModeInfo) (void);
 } static Internal = {
 	.Config = NULL,
 	.Configs = { NULL },
@@ -138,6 +136,8 @@ struct {
 	.SetFanBoost = & SetFanBoost,
 	.SetMode = & SetMode,
 	.HandleControl = & HandleControl,
+	.ResetBoostInfo = & ResetBoostInfo,
+	.ResetModeInfo = & ResetModeInfo,
 };
 
 void Start (const struct AWCCConfig_t * config_ac, const struct AWCCConfig_t * config_bat, const struct AWCCSystemLogger_t * systemLogger, const struct AWCCControl_t * control)
@@ -170,14 +170,8 @@ void Start (const struct AWCCConfig_t * config_ac, const struct AWCCConfig_t * c
 
 		if (powerState != Internal.PowerState) {
 			Internal.Config = Internal.Configs [powerState];
-			Internal.BoostInfos [AWCCFanCPU].BoostPhase = AWCCBoostPhaseInitial;
-			Internal.BoostInfos [AWCCFanCPU].BoostIntervalCurrent = -1;
-			Internal.BoostInfos [AWCCFanCPU].BoostIntervalToSet = -1;
-			Internal.BoostInfos [AWCCFanCPU].MaxBoost = Internal.Config->FanConfigs [AWCCFanCPU]._BoostIntervalCount - 1;
-			Internal.BoostInfos [AWCCFanGPU].BoostPhase = AWCCBoostPhaseInitial;
-			Internal.BoostInfos [AWCCFanGPU].BoostIntervalCurrent = -1;
-			Internal.BoostInfos [AWCCFanGPU].BoostIntervalToSet = -1;
-			Internal.BoostInfos [AWCCFanGPU].MaxBoost = Internal.Config->FanConfigs [AWCCFanGPU]._BoostIntervalCount - 1;
+			Internal.ResetBoostInfo (AWCCFanCPU);
+			Internal.ResetBoostInfo (AWCCFanGPU);
 			Internal.ModeInfo.ModePhase = AWCCModePhaseInitial;
 			Internal.ModeInfo.ModeInterval = -1;
 			Internal.PowerState = powerState;
@@ -280,6 +274,7 @@ void ManageSuperBoost (void)
 		else {
 			if (AWCCBoostPhaseHelping == Internal.BoostInfos [fan].BoostPhase) {
 				Internal.BoostInfos [fan].BoostPhase = AWCCBoostPhaseNormal;
+				Internal.BoostInfos [fan].BoostSetTime = Internal.CurrentTime;
 			}
 
 			Internal.BoostInfos [fan].BoostIntervalToSet = fanInfos [fan].boostIntervalByTemperature;
@@ -327,11 +322,12 @@ void ManageFanBoost (enum AWCCFan_t fan)
 		   AWCCBoostPhaseShiftToLower == Internal.BoostInfos [fan].BoostPhase
 		&& difftime (Internal.CurrentTime, Internal.BoostInfos [fan].ShiftToLowerTime) > Internal.Config->SuperBoostConfig.ShiftToLower [fan].Time
 	) {
+		// FIXME: avoid this big jump
 		Internal.SetFanBoost (fan, Internal.BoostInfos [fan].BoostIntervalToSet, AWCCBoostPhaseNormal);
 	}
 	else if (
 		   AWCCBoostPhaseUpShift == Internal.BoostInfos [fan].BoostPhase
-		&& Internal.BoostInfos [fan].BoostIntervalToSet <= Internal.BoostInfos [fan].BoostIntervalCurrent
+		&& Internal.BoostInfos [fan].BoostIntervalToSet <= Internal.BoostInfos [fan].BoostIntervalCurrent // alway true if reached this check
 	) {
 		if (AWCCBoostPendingNone == Internal.BoostInfos [fan].BoostPendingState) {
 			if (difftime (Internal.CurrentTime, Internal.BoostInfos [fan].BoostSetTime) >= Internal.Config->FanConfigs [fan].UpBoostShiftTime) {
@@ -388,7 +384,7 @@ void ManageFanBoost (enum AWCCFan_t fan)
 
 	if (1 == pendingShiftToLower && 0 == Internal.BoostInfos [fan].PendingHysteresis) {
 		Internal.BoostInfos [fan].PendingHysteresis = 1;
-		Internal.BoostInfos [fan].BoostPendingTime = Internal.CurrentTime;
+		Internal.BoostInfos [fan].PendingHysteresisTime = Internal.CurrentTime;
 	}
 	else if (0 == pendingShiftToLower && 1 == Internal.BoostInfos [fan].PendingHysteresis) {
 		Internal.BoostInfos [fan].PendingHysteresis = 0;
@@ -492,10 +488,8 @@ void SetFanBoost (enum AWCCFan_t fan, int boostInterval, enum AWCCBoostPhase_t b
 
 	Internal.BoostInfos [fan].BoostPhase = boostPhase;
 
-# ifndef DRY_RUN
 	AWCC.SetFanBoost (fan, boost);
 	Internal.BoostInfos [fan].Boost = boost;
-# endif // DRY_RUN
 
 	// Internal.BoostInfos [fan].LastTimeInCurrentTemperatureInterval = Internal.CurrentTime;
 
@@ -509,18 +503,12 @@ void SetMode (int modeInterval)
 {
 	enum AWCCMode_t mode = Internal.Config->ModeIntervals [modeInterval].Mode;
 
-# ifdef ENABLE_LOGS
-	printf ("Mode %s\n", AWCC.GetModeName (mode));
-# endif // ENABLE_LOGS
-
-# ifndef DRY_RUN
 	AWCC.SetMode (mode);
 
 	if (AWCCModeG != mode) {
 		AWCC.SetCpuBoost (Internal.BoostInfos [AWCCFanCPU].Boost);
 		AWCC.SetGpuBoost (Internal.BoostInfos [AWCCFanGPU].Boost);
 	}
-# endif // DRY_RUN
 
 	if (Internal.ModeInfo.ModeInterval != modeInterval) {
 		Internal.ModeInfo.Mode = mode;
@@ -581,4 +569,19 @@ void HandleControl (void)
 			Internal.Control->ApproveGpuControlState (); // TODO: Don't forget about system logger
 		}
 	}
+}
+
+void ResetBoostInfo (enum AWCCFan_t fan)
+{
+	Internal.BoostInfos [fan].BoostPhase = AWCCBoostPhaseInitial;
+	Internal.BoostInfos [fan].BoostPendingState = AWCCBoostPendingNone;
+	Internal.BoostInfos [fan].BoostIntervalCurrent = -1;
+	Internal.BoostInfos [fan].BoostIntervalToSet = -1;
+	Internal.BoostInfos [fan].Boost = 0;
+	Internal.BoostInfos [fan].MaxBoost = Internal.Config->FanConfigs [AWCCFanCPU]._BoostIntervalCount - 1;
+}
+
+void ResetModeInfo (void)
+{
+
 }

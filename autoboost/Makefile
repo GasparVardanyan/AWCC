@@ -1,6 +1,6 @@
 PREFIX = /usr/local
 
-CFLAGS=-std=c18 -pedantic-errors -Werror=pedantic -O0 -g -DDEBUG -I./include -include stdio.h -DENABLE_LOGS
+CFLAGS=-std=c18 -pedantic-errors -Werror=pedantic -O0 -g -DDEBUG -I./include -include stdio.h
 LIBS=-lusb-1.0 -lpcre2-32
 
 DEPS := $(wildcard include/*.h) $(wildcard src/*.h)
