@@ -24,10 +24,18 @@ const struct AWCCAutoBoost_t AWCCAutoBoost = {
 	.Start = & Start,
 };
 
+enum AWCCBoostPhase_t {
+	AWCCBoostPhaseInitial,
+	AWCCBoostPhaseUpShift,
+	AWCCBoostPhaseNormal,
+	AWCCBoostPhaseShiftToLower,
+	AWCCBoostPhaseHelping,
+};
+
 static void ManageSuperBoost (void);
 static void ManageFanBoost (enum AWCCFan_t);
 static void ManageMode (void);
-static void SetFanBoost (enum AWCCFan_t, int, _Bool);
+static void SetFanBoost (enum AWCCFan_t, int, enum AWCCBoostPhase_t);
 static void SetMode (int);
 static void HandleControl (void);
 
@@ -43,14 +51,11 @@ struct {
 		AWCCTemperature_t Temperature;
 		int BoostIntervalCurrent;
 		int BoostIntervalToSet;
-		enum {
-			AWCCBoostPhaseInitial,
-			AWCCBoostPhaseUpShift,
-			AWCCBoostPhaseNormal,
-		} BoostPhase;
+		enum AWCCBoostPhase_t BoostPhase;
 		time_t BoostSetTime;
 		// time_t LastTimeInCurrentTemperatureInterval;
 		time_t UpShiftDownTime;
+		time_t ShiftToLowerTime;
 		enum {
 			AWCCBoostPendingNone,
 			AWCCBoostPendingUp,
@@ -60,6 +65,7 @@ struct {
 		AWCCBoost_t Boost;
 		_Bool PendingHysteresis;
 		time_t PendingHysteresisTime;
+		int MaxBoost;
 	} BoostInfos [2];
 	struct {
 		_Bool Auto;
@@ -83,7 +89,7 @@ struct {
 	void (* ManageSuperBoost) (void);
 	void (* ManageFanBoost) (enum AWCCFan_t fan);
 	void (* ManageMode) (void);
-	void (* SetFanBoost) (enum AWCCFan_t, int, _Bool);
+	void (* SetFanBoost) (enum AWCCFan_t, int, enum AWCCBoostPhase_t);
 	void (* SetMode) (int);
 	void (* HandleControl) (void);
 } static Internal = {
@@ -134,6 +140,8 @@ void Start (const struct AWCCConfig_t * config_ac, const struct AWCCConfig_t * c
 	Internal.PowerState = AWCC.PowerState ();
 
 	Internal.Config = Internal.Configs [Internal.PowerState];
+	Internal.BoostInfos [AWCCFanCPU].MaxBoost = Internal.Config->FanConfigs [AWCCFanCPU]._BoostIntervalCount - 1;
+	Internal.BoostInfos [AWCCFanGPU].MaxBoost = Internal.Config->FanConfigs [AWCCFanGPU]._BoostIntervalCount - 1;
 
 	if (NULL != Internal.SystemLogger) {
 		mkdir (Internal.SystemLogger->Dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
@@ -155,9 +163,11 @@ void Start (const struct AWCCConfig_t * config_ac, const struct AWCCConfig_t * c
 			Internal.BoostInfos [AWCCFanCPU].BoostPhase = AWCCBoostPhaseInitial;
 			Internal.BoostInfos [AWCCFanCPU].BoostIntervalCurrent = -1;
 			Internal.BoostInfos [AWCCFanCPU].BoostIntervalToSet = -1;
+			Internal.BoostInfos [AWCCFanCPU].MaxBoost = Internal.Config->FanConfigs [AWCCFanCPU]._BoostIntervalCount - 1;
 			Internal.BoostInfos [AWCCFanGPU].BoostPhase = AWCCBoostPhaseInitial;
 			Internal.BoostInfos [AWCCFanGPU].BoostIntervalCurrent = -1;
 			Internal.BoostInfos [AWCCFanGPU].BoostIntervalToSet = -1;
+			Internal.BoostInfos [AWCCFanGPU].MaxBoost = Internal.Config->FanConfigs [AWCCFanGPU]._BoostIntervalCount - 1;
 			Internal.ModeInfo.ModePhase = AWCCModePhaseInitial;
 			Internal.ModeInfo.ModeInterval = -1;
 			Internal.PowerState = powerState;
@@ -258,17 +268,17 @@ void ManageFanBoost (enum AWCCFan_t fan)
 	// }
 
 	_Bool pending = 0;
-	_Bool pendingHysteresis = 0;
+	_Bool pendingShiftToLower = 0;
 
 	if (AWCCBoostPhaseInitial == Internal.BoostInfos [fan].BoostPhase) {
-		Internal.SetFanBoost (fan, Internal.BoostInfos [fan].BoostIntervalToSet, 1);
+		Internal.SetFanBoost (fan, Internal.BoostInfos [fan].BoostIntervalToSet, AWCCBoostPhaseUpShift);
 	}
 	else if (Internal.BoostInfos [fan].BoostIntervalToSet > Internal.BoostInfos [fan].BoostIntervalCurrent) {
 		pending = 1;
 
 		if (AWCCBoostPendingUp == Internal.BoostInfos [fan].BoostPendingState) {
 			if (difftime (Internal.CurrentTime, Internal.BoostInfos [fan].BoostPendingTime) >= Internal.Config->FanConfigs [fan].PendingTime) {
-				Internal.SetFanBoost (fan, Internal.BoostInfos [fan].BoostIntervalToSet, 1);
+				Internal.SetFanBoost (fan, Internal.BoostInfos [fan].BoostIntervalToSet, AWCCBoostPhaseUpShift);
 			}
 		}
 		else {
@@ -277,18 +287,29 @@ void ManageFanBoost (enum AWCCFan_t fan)
 		}
 	}
 	else if (
-		   Internal.BoostInfos [fan].BoostIntervalToSet <= Internal.BoostInfos [fan].BoostIntervalCurrent
-		&& AWCCBoostPhaseUpShift == Internal.BoostInfos [fan].BoostPhase
+		AWCCBoostPhaseHelping == Internal.BoostInfos [fan].BoostPhase
+	) {
+		// do nothing
+	}
+	else if (
+		   AWCCBoostPhaseShiftToLower == Internal.BoostInfos [fan].BoostPhase
+		&& difftime (Internal.CurrentTime, Internal.BoostInfos [fan].ShiftToLowerTime) > Internal.Config->SuperBoostConfig.ShiftToLower [fan].Time
+	) {
+		Internal.SetFanBoost (fan, Internal.BoostInfos [fan].BoostIntervalToSet, AWCCBoostPhaseNormal);
+	}
+	else if (
+		   AWCCBoostPhaseUpShift == Internal.BoostInfos [fan].BoostPhase
+		&& Internal.BoostInfos [fan].BoostIntervalToSet <= Internal.BoostInfos [fan].BoostIntervalCurrent
 	) {
 		if (AWCCBoostPendingNone == Internal.BoostInfos [fan].BoostPendingState) {
 			if (difftime (Internal.CurrentTime, Internal.BoostInfos [fan].BoostSetTime) >= Internal.Config->FanConfigs [fan].UpBoostShiftTime) {
-				Internal.SetFanBoost (fan, Internal.BoostInfos [fan].BoostIntervalCurrent, 0);
+				Internal.SetFanBoost (fan, Internal.BoostInfos [fan].BoostIntervalCurrent, AWCCBoostPhaseNormal);
 			}
 		}
 	}
 	else if (
-		   Internal.BoostInfos [fan].BoostIntervalToSet < Internal.BoostInfos [fan].BoostIntervalCurrent
-		&& AWCCBoostPhaseNormal == Internal.BoostInfos [fan].BoostPhase
+		   AWCCBoostPhaseNormal == Internal.BoostInfos [fan].BoostPhase
+		&& Internal.BoostInfos [fan].BoostIntervalToSet < Internal.BoostInfos [fan].BoostIntervalCurrent
 	) {
 		pending = 1;
 
@@ -304,7 +325,7 @@ void ManageFanBoost (enum AWCCFan_t fan)
 							   Internal.BoostInfos [fan].Temperature
 							<= Internal.Config->FanConfigs [fan].BoostIntervals [Internal.BoostInfos [fan].BoostIntervalCurrent].TemperatureRange.Min - Internal.Config->FanConfigs [fan].BoostDownHysteresis
 						) {
-							Internal.SetFanBoost (fan, Internal.BoostInfos [fan].BoostIntervalCurrent - 1, 0);
+							Internal.SetFanBoost (fan, Internal.BoostInfos [fan].BoostIntervalCurrent - 1, AWCCBoostPhaseNormal);
 						}
 						else {
 							if (1 == Internal.BoostInfos [fan].PendingHysteresis) {
@@ -312,11 +333,15 @@ void ManageFanBoost (enum AWCCFan_t fan)
 									   difftime (Internal.CurrentTime, Internal.BoostInfos [fan].PendingHysteresisTime)
 									>= Internal.Config->SuperBoostConfig.ShiftToLower [fan].PendingTime
 								) {
-
+									Internal.SetFanBoost (
+										  fan
+										, Internal.BoostInfos [fan].BoostIntervalToSet
+										, AWCCBoostPhaseShiftToLower
+									);
 								}
 							}
 							else {
-								pendingHysteresis = 1;
+								pendingShiftToLower = 1;
 							}
 						}
 					}
@@ -329,11 +354,11 @@ void ManageFanBoost (enum AWCCFan_t fan)
 		}
 	}
 
-	if (1 == pendingHysteresis && 0 == Internal.BoostInfos [fan].PendingHysteresis) {
+	if (1 == pendingShiftToLower && 0 == Internal.BoostInfos [fan].PendingHysteresis) {
 		Internal.BoostInfos [fan].PendingHysteresis = 1;
 		Internal.BoostInfos [fan].BoostPendingTime = Internal.CurrentTime;
 	}
-	else if (0 == pendingHysteresis && 1 == Internal.BoostInfos [fan].PendingHysteresis) {
+	else if (0 == pendingShiftToLower && 1 == Internal.BoostInfos [fan].PendingHysteresis) {
 		Internal.BoostInfos [fan].PendingHysteresis = 0;
 	}
 
@@ -408,28 +433,32 @@ void ManageMode (void)
 	}
 }
 
-void SetFanBoost (enum AWCCFan_t fan, int boostInterval, _Bool upShift)
+void SetFanBoost (enum AWCCFan_t fan, int boostInterval, enum AWCCBoostPhase_t boostPhase)
 {
 	AWCCBoost_t boost = Internal.Config->FanConfigs [fan].BoostIntervals [boostInterval].Boost;
 
 	if (AWCCFanBoostMin >= boost) {
 		boost = AWCCFanBoostMin;
-		Internal.BoostInfos [fan].BoostPhase = AWCCBoostPhaseNormal;
 	}
 	else if (AWCCFanBoostMax <= boost) {
 		boost = AWCCFanBoostMax;
-		Internal.BoostInfos [fan].BoostPhase = AWCCBoostPhaseNormal;
 	}
 	else {
-		if (1 == upShift) {
-			Internal.BoostInfos [fan].BoostPhase = AWCCBoostPhaseUpShift;
+		if (AWCCBoostPhaseUpShift == boostPhase) {
 			boost += Internal.Config->FanConfigs [fan].UpBoostShift;
 		}
-		else {
-			Internal.BoostInfos [fan].BoostPhase = AWCCBoostPhaseNormal;
+		else if (AWCCBoostPhaseShiftToLower == boostPhase) {
+			boost = Internal.Config->FanConfigs [fan].BoostIntervals [
+				AWCCUtils_MinInt (Internal.BoostInfos [fan].MaxBoost, Internal.BoostInfos [fan].BoostIntervalToSet + Internal.Config->SuperBoostConfig.ShiftToLower [fan].IntervalOffset)
+			].Boost;
+			Internal.BoostInfos [fan].ShiftToLowerTime = Internal.CurrentTime;
+		}
+		else if (AWCCBoostPhaseUpShift == Internal.BoostInfos [fan].BoostPhase) {
 			Internal.BoostInfos [fan].UpShiftDownTime = Internal.CurrentTime;
 		}
 	}
+
+	Internal.BoostInfos [fan].BoostPhase = boostPhase;
 
 # ifdef ENABLE_LOGS
 	printf ("%s BOOST %3d INTERVAL %d UPSHIFT %d\n", Internal.FanNames [fan], boost, boostInterval, upShift);
