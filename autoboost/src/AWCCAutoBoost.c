@@ -1,6 +1,6 @@
 # include "AWCCAutoBoost.h"
 
-#include <string.h>
+# include <string.h>
 # include <sys/stat.h>
 # include <threads.h>
 # include <time.h>
@@ -42,7 +42,6 @@ struct {
 	const struct AWCCSystemLogger_t * SystemLogger;
 	const struct AWCCControl_t * Control;
 	const char * const * BoostPhaseNames;
-	const char * const * FanNames;
 
 	time_t CurrentTime;
 	struct {
@@ -104,10 +103,6 @@ struct {
 		[AWCCBoostPhaseInitial] = "Initial",
 		[AWCCBoostPhaseShiftToLower] = "ShiftToLower",
 		[AWCCBoostPhaseUpShift] = "UpShift",
-	},
-	.FanNames = (const char * []) {
-		[AWCCFanCPU] = "central processor",
-		[AWCCFanGPU] = "graphic processor",
 	},
 
 	.BoostInfos = {
@@ -185,18 +180,18 @@ void Start (const struct AWCCConfig_t * config_ac, const struct AWCCConfig_t * c
 
 		enum AWCCFan_t fans [2] = {AWCCFanCPU, AWCCFanGPU};
 
+# ifdef ENABLE_LOGS
 		const char * time_str = ctime (& Internal.CurrentTime);
 
-# ifdef ENABLE_LOGS
 		printf (
 			"[%.*s] %s: %d[%d] %s, %s: %d[%d] %s\n",
 			(int) strlen (time_str) - 1,
 			time_str,
-			Internal.FanNames [AWCCFanCPU],
+			AWCC.GetFanName (AWCCFanCPU),
 			AWCC.GetFanBoost (AWCCFanCPU),
 			AWCC.GetFanTemperature (AWCCFanCPU),
 			Internal.BoostPhaseNames [Internal.BoostInfos [AWCCFanCPU].BoostPhase],
-			Internal.FanNames [AWCCFanGPU],
+			AWCC.GetFanName (AWCCFanGPU),
 			AWCC.GetFanBoost (AWCCFanGPU),
 			AWCC.GetFanTemperature (AWCCFanGPU),
 			Internal.BoostPhaseNames [Internal.BoostInfos [AWCCFanGPU].BoostPhase]
