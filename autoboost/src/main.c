@@ -8,6 +8,7 @@
 # include "AWCCAutoBoost.h"
 # include "AWCCConfig.h"
 # include "AWCCControl.h"
+# include "AWCCFanBoostManager.h"
 
 # ifdef __STDC_NO_THREADS__
 # error this tool currently depends on threads.h
@@ -95,11 +96,18 @@ int main (void)
 		}
 	}
 
-	if (1) {
+	if (0) {
 		struct AWCCConfig_t conf_ac = AWCCDefaultConfigAC ();
 		struct AWCCConfig_t conf_bat = AWCCDefaultConfigBAT ();
 		AWCCAutoBoost.Start (& conf_ac, & conf_bat, & AWCCSystemLoggerDefault, & AWCCControlDefault);
 		goto exit;
+	}
+
+	if (1) {
+		struct AWCCConfig_t conf_ac = AWCCDefaultConfigAC ();
+		struct AWCCConfig_t conf_bat = AWCCDefaultConfigBAT ();
+		// AWCCFanBoostManager.SetConfig (& conf_ac);
+		AWCCFanBoostManager.Loop ();
 	}
 
 exit:
