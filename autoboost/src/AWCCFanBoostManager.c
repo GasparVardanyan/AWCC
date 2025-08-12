@@ -23,7 +23,7 @@ enum {
 struct AWCCFanBoostPhaseManager_t {
 	enum AWCCFanBoostPhase_t NextPhasePriority [AWCCFanBoostPhaseCount];
 	_Bool (* CanChangeTo) (enum AWCCFanBoostPhase_t);
-	_Bool (* CanSetFrom) (enum AWCCFanBoostPhase_t);
+	_Bool (* CanChangeFrom) (enum AWCCFanBoostPhase_t);
 	void (* InitializePhase) (enum AWCCFan_t);
 	void (* ManagePhase) (enum AWCCFan_t);
 } extern const AWCCFanBoostPhaseManager [AWCCFanBoostPhaseCount];
@@ -90,7 +90,7 @@ void Manage (enum AWCCFan_t fan)
 		if (AWCCFanBoostPhaseNone != nextPhase) {
 			if (
 				   AWCCFanBoostPhaseManager [Internal.BoostInfos [fan].Phase].CanChangeTo (nextPhase)
-				&& AWCCFanBoostPhaseManager [nextPhase].CanSetFrom (Internal.BoostInfos [fan].Phase)
+				&& AWCCFanBoostPhaseManager [nextPhase].CanChangeFrom (Internal.BoostInfos [fan].Phase)
 			) {
 				Internal.SetPhase (fan, nextPhase);
 			}
@@ -169,23 +169,33 @@ void SetPhase (enum AWCCFan_t fan, enum AWCCFanBoostPhase_t phase)
 
 
 
-static _Bool CanChangeTo_Disabled (enum AWCCFanBoostPhase_t);
-static _Bool CanSetFrom_Disabled (enum AWCCFanBoostPhase_t);
+static _Bool CanChangeFromDisabledTo (enum AWCCFanBoostPhase_t);
+static _Bool CanChangeToDisabledFrom (enum AWCCFanBoostPhase_t);
 static void InitializePhase_Disabled (enum AWCCFan_t);
 static void ManagePhase_Disabled (enum AWCCFan_t);
 
-static _Bool CanChangeTo_Initial (enum AWCCFanBoostPhase_t);
-static _Bool CanSetFrom_Initial (enum AWCCFanBoostPhase_t);
+static _Bool CanChangeFromInitialTo (enum AWCCFanBoostPhase_t);
+static _Bool CanChangeToInitialFrom (enum AWCCFanBoostPhase_t);
 static void InitializePhase_Initial (enum AWCCFan_t);
 static void ManagePhase_Initial (enum AWCCFan_t);
+
+static _Bool CanChangeFromUpShiftTo (enum AWCCFanBoostPhase_t);
+static _Bool CanChangeToUpShiftFrom (enum AWCCFanBoostPhase_t);
+static void InitializePhase_UpShift (enum AWCCFan_t);
+static void ManagePhase_UpShift (enum AWCCFan_t);
+
+static _Bool CanChangeFromNormalTo (enum AWCCFanBoostPhase_t);
+static _Bool CanChangeToNormalFrom (enum AWCCFanBoostPhase_t);
+static void InitializePhase_Normal (enum AWCCFan_t);
+static void ManagePhase_Normal (enum AWCCFan_t);
 
 const struct AWCCFanBoostPhaseManager_t AWCCFanBoostPhaseManager [] = {
 	[AWCCFanBoostPhaseDisabled] = {
 		.NextPhasePriority = {
 			AWCCFanBoostPhaseInitial,
 		},
-		.CanChangeTo = & CanChangeTo_Disabled,
-		.CanSetFrom = & CanSetFrom_Disabled,
+		.CanChangeTo = & CanChangeFromDisabledTo,
+		.CanChangeFrom = & CanChangeToDisabledFrom,
 		.InitializePhase = & InitializePhase_Disabled,
 		.ManagePhase = & ManagePhase_Disabled,
 	},
@@ -195,12 +205,12 @@ const struct AWCCFanBoostPhaseManager_t AWCCFanBoostPhaseManager [] = {
 			AWCCFanBoostPhaseShiftToLower,
 			AWCCFanBoostPhaseHelping,
 		},
-		.CanChangeTo = & CanChangeTo_Initial,
-		.CanSetFrom = & CanSetFrom_Initial,
+		.CanChangeTo = & CanChangeFromInitialTo,
+		.CanChangeFrom = & CanChangeToInitialFrom,
 	},
 };
 
-_Bool CanChangeTo_Disabled (enum AWCCFanBoostPhase_t phase)
+_Bool CanChangeFromDisabledTo (enum AWCCFanBoostPhase_t phase)
 {
 	_Bool can = 0;
 
@@ -216,7 +226,7 @@ _Bool CanChangeTo_Disabled (enum AWCCFanBoostPhase_t phase)
 	return can;
 }
 
-_Bool CanSetFrom_Disabled (enum AWCCFanBoostPhase_t phase)
+_Bool CanChangeToDisabledFrom (enum AWCCFanBoostPhase_t phase)
 {
 	return 1;
 }
@@ -231,7 +241,7 @@ void ManagePhase_Disabled (enum AWCCFan_t fan)
 
 }
 
-_Bool CanChangeTo_Initial (enum AWCCFanBoostPhase_t phase)
+_Bool CanChangeFromInitialTo (enum AWCCFanBoostPhase_t phase)
 {
 	_Bool can = 0;
 
@@ -247,8 +257,43 @@ _Bool CanChangeTo_Initial (enum AWCCFanBoostPhase_t phase)
 	return can;
 }
 
-_Bool CanSetFrom_Initial (enum AWCCFanBoostPhase_t phase)
+_Bool CanChangeToInitialFrom (enum AWCCFanBoostPhase_t phase)
 {
 	return 0;
 }
 
+_Bool CanChangeFromUpShiftTo (enum AWCCFanBoostPhase_t phase)
+{
+	return 0;
+}
+
+_Bool CanChangeToUpShiftFrom (enum AWCCFanBoostPhase_t phase)
+{
+	return 0;
+}
+
+void InitializePhase_UpShift (enum AWCCFan_t fan)
+{
+}
+
+void ManagePhase_UpShift (enum AWCCFan_t fan)
+{
+}
+
+_Bool CanChangeFromNormalTo (enum AWCCFanBoostPhase_t phase)
+{
+	return 0;
+}
+
+_Bool CanChangeToNormalFrom (enum AWCCFanBoostPhase_t phase)
+{
+	return 0;
+}
+
+void InitializePhase_Normal (enum AWCCFan_t fan)
+{
+}
+
+void ManagePhase_Normal (enum AWCCFan_t fan)
+{
+}
