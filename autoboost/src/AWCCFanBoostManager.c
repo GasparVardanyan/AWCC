@@ -15,9 +15,22 @@ enum AWCCFanBoostPhase_t {
 };
 
 enum {
-	AWCCFanBoostPhaseCount = 6
+	AWCCFanBoostPhaseCount = 7
 };
 
+
+// Phase Switch Table
+//
+// |              | TO: | None | Disabled | Initial | UpShift | Normal | ShiftToLower | Helping |
+// |--------------|-----|------|----------|---------|---------|--------|--------------|---------|
+// | FROM:        |     |      |          |         |         |        |              |         |
+// | None         |     |      |          |         |         |        |              |         |
+// | Disabled     |     |      | x        | x       |         |        |              |         |
+// | Initial      |     |      |          |         | x       |        |              | x       |
+// | UpShift      |     |      | x        |         | x       | x      |              | x       |
+// | Normal       |     |      | x        |         | x       | x      | x            | x       |
+// | ShiftToLower |     |      | x        |         | x       |        | x            | x       |
+// | Helping      |     |      | x        |         | x       |        |              |         |
 
 
 struct AWCCFanBoostPhaseManager_t {
@@ -92,6 +105,8 @@ void Manage (enum AWCCFan_t fan)
 				   AWCCFanBoostPhaseManager [Internal.BoostInfos [fan].Phase].CanChangeTo (nextPhase)
 				&& AWCCFanBoostPhaseManager [nextPhase].CanChangeFrom (Internal.BoostInfos [fan].Phase)
 			) {
+				// NOTE: we don't break here, we continue checking, so SetPhase should only set initial parameters of phase
+				// without doing any actual change with AWCC
 				Internal.SetPhase (fan, nextPhase);
 			}
 		}
@@ -192,6 +207,7 @@ static void ManagePhase_Normal (enum AWCCFan_t);
 const struct AWCCFanBoostPhaseManager_t AWCCFanBoostPhaseManager [] = {
 	[AWCCFanBoostPhaseDisabled] = {
 		.NextPhasePriority = {
+			AWCCFanBoostPhaseDisabled,
 			AWCCFanBoostPhaseInitial,
 		},
 		.CanChangeTo = & CanChangeFromDisabledTo,
@@ -202,11 +218,49 @@ const struct AWCCFanBoostPhaseManager_t AWCCFanBoostPhaseManager [] = {
 	[AWCCFanBoostPhaseInitial] = {
 		.NextPhasePriority = {
 			AWCCFanBoostPhaseUpShift,
-			AWCCFanBoostPhaseShiftToLower,
 			AWCCFanBoostPhaseHelping,
 		},
 		.CanChangeTo = & CanChangeFromInitialTo,
 		.CanChangeFrom = & CanChangeToInitialFrom,
+	},
+	[AWCCFanBoostPhaseUpShift] = {
+		.NextPhasePriority = {
+			AWCCFanBoostPhaseDisabled,
+			AWCCFanBoostPhaseUpShift,
+			AWCCFanBoostPhaseNormal,
+			AWCCFanBoostPhaseHelping,
+		},
+		.CanChangeTo = & CanChangeFromUpShiftTo,
+		.CanChangeFrom = & CanChangeToUpShiftFrom,
+	},
+	[AWCCFanBoostPhaseNormal] = {
+		.NextPhasePriority = {
+			AWCCFanBoostPhaseDisabled,
+			AWCCFanBoostPhaseUpShift,
+			AWCCFanBoostPhaseNormal,
+			AWCCFanBoostPhaseShiftToLower,
+			AWCCFanBoostPhaseHelping,
+		},
+		.CanChangeTo = & CanChangeFromNormalTo,
+		.CanChangeFrom = & CanChangeToNormalFrom,
+	},
+	[AWCCFanBoostPhaseShiftToLower] = {
+		.NextPhasePriority = {
+			AWCCFanBoostPhaseDisabled,
+			AWCCFanBoostPhaseUpShift,
+			AWCCFanBoostPhaseShiftToLower,
+			AWCCFanBoostPhaseHelping,
+		},
+		.CanChangeTo = & CanChangeFromNormalTo,
+		.CanChangeFrom = & CanChangeToNormalFrom,
+	},
+	[AWCCFanBoostPhaseHelping] = {
+		.NextPhasePriority = {
+			AWCCFanBoostPhaseDisabled,
+			AWCCFanBoostPhaseUpShift,
+		},
+		.CanChangeTo = & CanChangeFromNormalTo,
+		.CanChangeFrom = & CanChangeToNormalFrom,
 	},
 };
 
