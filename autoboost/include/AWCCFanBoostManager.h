@@ -1,5 +1,5 @@
-# ifndef __AWCC_BOOSTSTATE_H
-# define __AWCC_BOOSTSTATE_H
+# ifndef __AWCC_FANBOOSTMANAGER_H
+# define __AWCC_FANBOOSTMANAGER_H
 
 # include <time.h>
 
@@ -16,4 +16,4 @@ struct AWCCFanBoostManager_t {
 	void (* SetPowerState) (enum AWCCPowerState_t);
 } extern const AWCCFanBoostManager;
 
-# endif // __AWCC_BOOSTSTATE_H
+# endif // __AWCC_FANBOOSTMANAGER_H

@@ -104,8 +104,8 @@ int main (void)
 	}
 
 	if (1) {
-		struct AWCCConfig_t conf_ac = AWCCDefaultConfigAC ();
-		struct AWCCConfig_t conf_bat = AWCCDefaultConfigBAT ();
+		// struct AWCCConfig_t conf_ac = AWCCDefaultConfigAC ();
+		// struct AWCCConfig_t conf_bat = AWCCDefaultConfigBAT ();
 		// AWCCFanBoostManager.SetConfig (& conf_ac);
 		AWCCFanBoostManager.Loop ();
 	}

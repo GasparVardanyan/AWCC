@@ -304,7 +304,7 @@ void ManageFanBoost (enum AWCCFan_t fan)
 		pending = 1;
 
 		if (AWCCBoostPendingUp == Internal.BoostInfos [fan].BoostPendingState) {
-			if (difftime (Internal.CurrentTime, Internal.BoostInfos [fan].BoostPendingTime) >= Internal.Config->FanConfigs [fan].PendingTime) {
+			if (difftime (Internal.CurrentTime, Internal.BoostInfos [fan].BoostPendingTime) >= Internal.Config->FanConfigs [fan].PendingTime) { // NOTE: MOVED
 				Internal.SetFanBoost (fan, Internal.BoostInfos [fan].BoostIntervalToSet, AWCCBoostPhaseUpShift);
 			}
 		}
@@ -337,11 +337,11 @@ void ManageFanBoost (enum AWCCFan_t fan)
 		pending = 1;
 
 		if (AWCCBoostPendingDown == Internal.BoostInfos [fan].BoostPendingState) {
-			if (difftime (Internal.CurrentTime, Internal.BoostInfos [fan].BoostPendingTime) >= Internal.Config->FanConfigs [fan].PendingTime) {
+			if (difftime (Internal.CurrentTime, Internal.BoostInfos [fan].BoostPendingTime) >= Internal.Config->FanConfigs [fan].PendingTime) { // NOTE: MOVED
 				if (
 					  // difftime (currentTime, Internal.BoostInfos [fan].LastTimeInCurrentTemperatureInterval)
 					   difftime (Internal.CurrentTime, Internal.BoostInfos [fan].BoostSetTime)
-					>= Internal.Config->FanConfigs [fan].MinTimeBeforeBoostDown / (float) (Internal.BoostInfos [fan].BoostIntervalCurrent - Internal.BoostInfos [fan].BoostIntervalToSet)
+					>= Internal.Config->FanConfigs [fan].MinTimeBeforeBoostDown / (float) (Internal.BoostInfos [fan].BoostIntervalCurrent - Internal.BoostInfos [fan].BoostIntervalToSet) // NOTE: MOVED
 				) {
 					if (difftime (Internal.CurrentTime, Internal.BoostInfos [fan].UpShiftDownTime) >= Internal.Config->FanConfigs [fan].MinTimeAfterShiftDown) {
 						if (
