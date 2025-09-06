@@ -50,6 +50,7 @@ struct AWCCFanBoostManagerInternal_t {
 
 	struct {
 		_Bool (* PendingStateSatisfied) (enum AWCCFan_t);
+		_Bool (* UpShiftTimePassed) (enum AWCCFan_t);
 	} ConfigUtils;
 
 	time_t CurrentTime;
@@ -58,6 +59,8 @@ struct AWCCFanBoostManagerInternal_t {
 	const struct AWCCConfig_t * Configs [2];
 	enum AWCCPowerState_t PowerState;
 	const struct AWCCSystemLogger_t * SystemLogger;
+
+	enum AWCCFan_t FanPairs [2];
 
 	void (* SetPhase) (enum AWCCFan_t, enum AWCCFanBoostPhase_t);
 	void (* SetBoost) (enum AWCCFan_t, AWCCBoost_t);

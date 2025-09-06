@@ -2,12 +2,15 @@
 
 # include <string.h>
 
+# include "AWCC.h"
 # include "AWCCConfig.h"
+# include "AWCCFanBoostPhaseManager.h"
 
-static _Bool PendingStateSatisfied (enum AWCCFan_t);
 static void SetPhase (enum AWCCFan_t, enum AWCCFanBoostPhase_t);
 static void SetBoost (enum AWCCFan_t, AWCCBoost_t);
 static void SetBoostIntervalByTemperature (enum AWCCFan_t, int);
+static _Bool PendingStateSatisfied (enum AWCCFan_t);
+static _Bool UpShiftTimePassed (enum AWCCFan_t);
 static _Bool BoostDownTimeSatisfied (enum AWCCFan_t);
 
 static void LogTime (void);
@@ -25,26 +28,21 @@ struct AWCCFanBoostManagerInternal_t Internal = {
 		},
 	},
 	.ConfigUtils = {
-		.PendingStateSatisfied = & PendingStateSatisfied
+		.PendingStateSatisfied = & PendingStateSatisfied,
+		.UpShiftTimePassed = & UpShiftTimePassed,
 	},
 	.SystemLogger = NULL,
+
+	.FanPairs = {
+		[AWCCFanCPU] = AWCCFanGPU,
+		[AWCCFanGPU] = AWCCFanCPU,
+	},
 
 	.SetPhase = & SetPhase,
 	.SetBoost = & SetBoost,
 	.SetBoostIntervalByTemperature = & SetBoostIntervalByTemperature,
 	.LogTime = & LogTime,
 };
-
-_Bool PendingStateSatisfied (enum AWCCFan_t fan)
-{
-	_Bool satisfied = 0;
-
-	if (difftime (Internal.CurrentTime, Internal.BoostInfos [fan].BoostPendingTime) >= Internal.Config->FanConfigs [fan].PendingTime) {
-		satisfied = 1;
-	}
-
-	return satisfied;
-}
 
 void SetPhase (enum AWCCFan_t fan, enum AWCCFanBoostPhase_t phase)
 {
@@ -53,8 +51,7 @@ void SetPhase (enum AWCCFan_t fan, enum AWCCFanBoostPhase_t phase)
 
 	Internal.BoostInfos [fan].PhaseSetTime = Internal.CurrentTime;
 	Internal.BoostInfos [fan].Phase = phase;
-	// FIXME:
-	// AWCCFanBoostPhaseManager [phase].InitializePhase (fan);
+	AWCCFanBoostPhaseManager [phase].InitializePhase (fan);
 }
 
 void SetBoost (enum AWCCFan_t fan, AWCCBoost_t boost)
@@ -93,6 +90,28 @@ void SetBoostIntervalByTemperature (enum AWCCFan_t fan, int interval)
 	Internal.BoostInfos [fan].BoostIntervalByTemperatureSetTime = Internal.CurrentTime;
 
 skip_boost_registration:;
+}
+
+_Bool PendingStateSatisfied (enum AWCCFan_t fan)
+{
+	_Bool satisfied = 0;
+
+	if (difftime (Internal.CurrentTime, Internal.BoostInfos [fan].BoostPendingTime) >= Internal.Config->FanConfigs [fan].PendingTime) {
+		satisfied = 1;
+	}
+
+	return satisfied;
+}
+
+_Bool UpShiftTimePassed (enum AWCCFan_t fan)
+{
+	_Bool satisfied = 0;
+
+	if (difftime (Internal.CurrentTime, Internal.BoostInfos [fan].PhaseSetTime) >= Internal.Config->FanConfigs [fan].UpBoostShiftTime) {
+		satisfied = 1;
+	}
+
+	return satisfied;
 }
 
 void LogTime (void) {

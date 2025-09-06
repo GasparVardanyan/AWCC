@@ -11,5 +11,4 @@ struct AWCCFanBoostPhaseManager_t {
 	void (* ManagePhase) (enum AWCCFan_t);
 } extern const AWCCFanBoostPhaseManager [AWCCFanBoostPhaseCount];
 
-
 # endif // __AWCC_FANBOOSTPHASEMANAGER_H

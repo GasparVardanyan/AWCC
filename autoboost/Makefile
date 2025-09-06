@@ -1,7 +1,7 @@
 PREFIX = /usr/local
 
 CFLAGS=-std=c18 -pedantic-errors -Werror=pedantic -O0 -g -DDEBUG -I./include -include stdio.h -DENABLE_LOGS
-LIBS=-lusb-1.0 -lpcre2-32
+LIBS=
 
 DEPS := $(wildcard include/*.h) $(wildcard src/*.h)
 SRC := $(wildcard src/*.c)
