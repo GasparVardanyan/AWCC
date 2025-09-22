@@ -42,10 +42,8 @@ struct AWCCFanBoostManagerInternal_t {
 		time_t BoostPendingTime;
 		time_t BoostIntervalByTemperatureSetTime;
 		time_t PhaseSetTime;
+		time_t BoostSetTime;
 		enum AWCCFanBoostPhase_t Phase;
-		struct {
-			_Bool ShiftActive;
-		} UpShiftInfo;
 	} BoostInfos [2];
 
 	struct {
@@ -62,9 +60,11 @@ struct AWCCFanBoostManagerInternal_t {
 
 	enum AWCCFan_t FanPairs [2];
 
+	_Bool (* Pending) (enum AWCCFan_t, enum AWCCFanBoostPhase_t);
 	void (* SetPhase) (enum AWCCFan_t, enum AWCCFanBoostPhase_t);
 	void (* SetBoost) (enum AWCCFan_t, AWCCBoost_t);
-	void (* SetBoostIntervalByTemperature) (enum AWCCFan_t, AWCCBoost_t);
+	void (* SetBoostByInterval) (enum AWCCFan_t, int);
+	void (* RegBoostIntervalByTemperature) (enum AWCCFan_t, AWCCBoost_t);
 	void (* LogTime) (void);
 } extern Internal;
 

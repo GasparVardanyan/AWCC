@@ -113,7 +113,7 @@ void Loop (void)
 					Internal.Config->FanConfigs [fan].BoostIntervals [interval].TemperatureRange.Min <= Internal.BoostInfos [fan].Temperature  &&
 					Internal.Config->FanConfigs [fan].BoostIntervals [interval].TemperatureRange.Max >= Internal.BoostInfos [fan].Temperature
 				) {
-					Internal.SetBoostIntervalByTemperature (fan, interval);
+					Internal.RegBoostIntervalByTemperature (fan, interval);
 					break;
 				}
 			}

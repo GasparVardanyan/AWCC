@@ -6,9 +6,11 @@
 # include "AWCCConfig.h"
 # include "AWCCFanBoostPhaseManager.h"
 
+static _Bool Pending (enum AWCCFan_t, enum AWCCFanBoostPhase_t);
 static void SetPhase (enum AWCCFan_t, enum AWCCFanBoostPhase_t);
 static void SetBoost (enum AWCCFan_t, AWCCBoost_t);
-static void SetBoostIntervalByTemperature (enum AWCCFan_t, int);
+static void SetBoostByInterval (enum AWCCFan_t, int);
+static void RegBoostIntervalByTemperature (enum AWCCFan_t, int);
 static _Bool PendingStateSatisfied (enum AWCCFan_t);
 static _Bool UpShiftTimePassed (enum AWCCFan_t);
 static _Bool BoostDownTimeSatisfied (enum AWCCFan_t);
@@ -38,11 +40,32 @@ struct AWCCFanBoostManagerInternal_t Internal = {
 		[AWCCFanGPU] = AWCCFanCPU,
 	},
 
+	.Pending = & Pending,
 	.SetPhase = & SetPhase,
 	.SetBoost = & SetBoost,
-	.SetBoostIntervalByTemperature = & SetBoostIntervalByTemperature,
+	.SetBoostByInterval = & SetBoostByInterval,
+	.RegBoostIntervalByTemperature = & RegBoostIntervalByTemperature,
 	.LogTime = & LogTime,
 };
+
+_Bool Pending (enum AWCCFan_t fan, enum AWCCFanBoostPhase_t phase)
+{
+	_Bool pending = 1;
+
+	switch (Internal.BoostInfos [fan].Phase) {
+	case AWCCFanBoostPhaseUpShift :
+		if (AWCCFanBoostPhaseNormal == phase) {
+			pending = 0;
+		}
+		break;
+	case AWCCFanBoostPhaseDisabled :
+	case AWCCFanBoostPhaseInitial :
+			pending = 0;
+		break;
+	}
+
+	return pending;
+}
 
 void SetPhase (enum AWCCFan_t fan, enum AWCCFanBoostPhase_t phase)
 {
@@ -60,11 +83,26 @@ void SetBoost (enum AWCCFan_t fan, AWCCBoost_t boost)
 	printf ("%s fan boost set to %d\n", AWCC.GetFanName (fan), boost);
 
 	Internal.BoostInfos [fan].Boost = boost;
-	// FIXME:
-	// AWCC.SetFanBoost (fan, boost);
+	Internal.BoostInfos [fan].BoostSetTime = Internal.CurrentTime;
+	AWCC.SetFanBoost (fan, boost);
 }
 
-void SetBoostIntervalByTemperature (enum AWCCFan_t fan, int interval)
+void SetBoostByInterval (enum AWCCFan_t fan, int interval)
+{
+	Internal.LogTime ();
+	printf ("%s fan boost interval set to %d\n", AWCC.GetFanName (fan), interval);
+
+	Internal.BoostInfos [fan].BoostIntervalCurrent = interval;
+
+	AWCCBoost_t boost = Internal.Config->FanConfigs [fan].BoostIntervals [interval].Boost;
+	if (AWCCFanBoostPhaseUpShift == Internal.BoostInfos [fan].Phase) {
+		boost += Internal.Config->FanConfigs [fan].UpBoostShift;
+	}
+
+	Internal.SetBoost (fan, boost);
+}
+
+void RegBoostIntervalByTemperature (enum AWCCFan_t fan, int interval)
 {
 	if (Internal.BoostInfos [fan].BoostIntervalByTemperature < interval) {
 		if (AWCCBoostPendingUp != Internal.BoostInfos [fan].BoostPendingState) {

@@ -1,7 +1,7 @@
 # include "AWCCFanBoostPhaseManager.h"
 
 # include "AWCCConfig.h"
-#include "AWCCFanBoostManagerInternal.h"
+# include "AWCCFanBoostManagerInternal.h"
 
 // TODO: read controls
 static _Bool CanChangeFromDisabledTo (enum AWCCFanBoostPhase_t, enum AWCCFan_t);
@@ -38,7 +38,7 @@ static void ManagePhase_Helping (enum AWCCFan_t);
 const struct AWCCFanBoostPhaseManager_t AWCCFanBoostPhaseManager [] = {
 	[AWCCFanBoostPhaseDisabled] = {
 		.NextPhasePriority = {
-			AWCCFanBoostPhaseDisabled,
+			// AWCCFanBoostPhaseDisabled,
 			AWCCFanBoostPhaseInitial,
 		},
 		.CanChangeTo = & CanChangeFromDisabledTo,
@@ -49,7 +49,7 @@ const struct AWCCFanBoostPhaseManager_t AWCCFanBoostPhaseManager [] = {
 	[AWCCFanBoostPhaseInitial] = {
 		.NextPhasePriority = {
 			AWCCFanBoostPhaseUpShift,
-			AWCCFanBoostPhaseHelping,
+			// AWCCFanBoostPhaseHelping,
 		},
 		.CanChangeTo = & CanChangeFromInitialTo,
 		.CanChangeFrom = & CanChangeToInitialFrom,
@@ -61,7 +61,7 @@ const struct AWCCFanBoostPhaseManager_t AWCCFanBoostPhaseManager [] = {
 			AWCCFanBoostPhaseDisabled,
 			AWCCFanBoostPhaseUpShift,
 			AWCCFanBoostPhaseNormal,
-			AWCCFanBoostPhaseHelping,
+			// AWCCFanBoostPhaseHelping,
 		},
 		.CanChangeTo = & CanChangeFromUpShiftTo,
 		.CanChangeFrom = & CanChangeToUpShiftFrom,
@@ -72,37 +72,37 @@ const struct AWCCFanBoostPhaseManager_t AWCCFanBoostPhaseManager [] = {
 		.NextPhasePriority = {
 			AWCCFanBoostPhaseDisabled,
 			AWCCFanBoostPhaseUpShift,
-			AWCCFanBoostPhaseNormal,
-			AWCCFanBoostPhaseShiftToLower,
-			AWCCFanBoostPhaseHelping,
+			// AWCCFanBoostPhaseNormal,
+			// AWCCFanBoostPhaseShiftToLower,
+			// AWCCFanBoostPhaseHelping,
 		},
 		.CanChangeTo = & CanChangeFromNormalTo,
 		.CanChangeFrom = & CanChangeToNormalFrom,
 		.InitializePhase = & InitializePhase_Normal,
 		.ManagePhase = & ManagePhase_Normal,
 	},
-	[AWCCFanBoostPhaseShiftToLower] = {
-		.NextPhasePriority = {
-			AWCCFanBoostPhaseDisabled,
-			AWCCFanBoostPhaseUpShift,
-			AWCCFanBoostPhaseShiftToLower,
-			AWCCFanBoostPhaseHelping,
-		},
-		.CanChangeTo = & CanChangeFromShiftToLowerTo,
-		.CanChangeFrom = & CanChangeToShiftToLowerFrom,
-		.InitializePhase = & InitializePhase_ShiftToLower,
-		.ManagePhase = & ManagePhase_ShiftToLower,
-	},
-	[AWCCFanBoostPhaseHelping] = {
-		.NextPhasePriority = {
-			AWCCFanBoostPhaseDisabled,
-			AWCCFanBoostPhaseUpShift,
-		},
-		.CanChangeTo = & CanChangeFromHelpingTo,
-		.CanChangeFrom = & CanChangeToHelpingFrom,
-		.InitializePhase = & InitializePhase_Helping,
-		.ManagePhase = & ManagePhase_Helping,
-	},
+	// [AWCCFanBoostPhaseShiftToLower] = {
+	// 	// .NextPhasePriority = {
+	// 	// 	AWCCFanBoostPhaseDisabled,
+	// 	// 	AWCCFanBoostPhaseUpShift,
+	// 	// 	AWCCFanBoostPhaseShiftToLower,
+	// 	// 	AWCCFanBoostPhaseHelping,
+	// 	// },
+	// 	// .CanChangeTo = & CanChangeFromShiftToLowerTo,
+	// 	// .CanChangeFrom = & CanChangeToShiftToLowerFrom,
+	// 	// .InitializePhase = & InitializePhase_ShiftToLower,
+	// 	// .ManagePhase = & ManagePhase_ShiftToLower,
+	// },
+	// [AWCCFanBoostPhaseHelping] = {
+	// 	.NextPhasePriority = {
+	// 		AWCCFanBoostPhaseDisabled,
+	// 		AWCCFanBoostPhaseUpShift,
+	// 	},
+	// 	.CanChangeTo = & CanChangeFromHelpingTo,
+	// 	.CanChangeFrom = & CanChangeToHelpingFrom,
+	// 	.InitializePhase = & InitializePhase_Helping,
+	// 	.ManagePhase = & ManagePhase_Helping,
+	// },
 };
 
 _Bool CanChangeFromDisabledTo (enum AWCCFanBoostPhase_t phase, enum AWCCFan_t fan)
@@ -219,13 +219,14 @@ _Bool CanChangeToUpShiftFrom (enum AWCCFanBoostPhase_t phase, enum AWCCFan_t fan
 
 void InitializePhase_UpShift (enum AWCCFan_t fan)
 {
-	Internal.BoostInfos [fan].UpShiftInfo.ShiftActive = 0;
+	Internal.SetBoostByInterval (
+		  fan
+		, Internal.BoostInfos [fan].BoostIntervalByTemperature
+	);
 }
 
 void ManagePhase_UpShift (enum AWCCFan_t fan)
 {
-	if (Internal.BoostInfos [fan].UpShiftInfo.ShiftActive == 0) {
-	}
 }
 
 _Bool CanChangeFromNormalTo (enum AWCCFanBoostPhase_t phase, enum AWCCFan_t fan)
@@ -251,6 +252,10 @@ _Bool CanChangeToNormalFrom (enum AWCCFanBoostPhase_t phase, enum AWCCFan_t fan)
 
 void InitializePhase_Normal (enum AWCCFan_t fan)
 {
+	Internal.SetBoostByInterval (
+		  fan
+		, Internal.BoostInfos [fan].BoostIntervalByTemperature
+	);
 }
 
 void ManagePhase_Normal (enum AWCCFan_t fan)
