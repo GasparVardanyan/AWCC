@@ -1,10 +1,10 @@
 PREFIX = /usr/local
 
-CFLAGS=-std=c18 -pedantic-errors -Werror=pedantic -O0 -g -DDEBUG -I./include -include stdio.h -DENABLE_LOGS
+CFLAGS=-std=c18 -pedantic-errors -Werror=pedantic -O0 -g -DDEBUG -I./include -I./temporary/include -I./src -I./temporary/src -include stdio.h -DENABLE_LOGS
 LIBS=
 
-DEPS := $(wildcard include/*.h) $(wildcard src/*.h)
-SRC := $(wildcard src/*.c)
+DEPS := $(wildcard include/*.h) $(wildcard temporary/include/*.h) $(wildcard src/*.h) $(wildcard temporary/src/*.h)
+SRC := $(wildcard src/*.c) $(wildcard temporary/src/*.c)
 
 OBJ=${SRC:%.c=%.o}
 

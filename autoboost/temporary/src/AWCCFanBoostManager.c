@@ -60,12 +60,6 @@ _Bool CanChangeFromUpShiftToNormal (enum AWCCFan_t fan) {
 		if (1 == Internal.ConfigUtils.UpShiftTimePassed (fan)) {
 			can = 1;
 		}
-		else {
-			puts ("upshift time not passed");
-		}
-	}
-	else {
-		puts ("pending not satisfied");
 	}
 	return can;
 }
