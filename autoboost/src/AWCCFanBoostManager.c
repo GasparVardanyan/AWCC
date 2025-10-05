@@ -26,24 +26,70 @@ const struct AWCCFanBoostManager_t AWCCFanBoostManager = {
 	.Loop = & Loop,
 };
 
+static _Bool CanChangeFromDisabledToInitial (enum AWCCFan_t);
+static _Bool CanChangeFromInitialToUpshift (enum AWCCFan_t);
+static _Bool CanChangeFromUpShiftToNormal (enum AWCCFan_t);
+static _Bool CanChangeFromUpShiftToUpShift (enum AWCCFan_t);
+
+static _Bool (*
+	CanChangeFromTo [AWCCFanBoostPhaseCount] [AWCCFanBoostPhaseCount]
+) (enum AWCCFan_t) = {
+	[AWCCFanBoostPhaseDisabled] = {
+		[AWCCFanBoostPhaseInitial] = & CanChangeFromDisabledToInitial,
+	},
+	[AWCCFanBoostPhaseInitial] = {
+		[AWCCFanBoostPhaseUpShift] = & CanChangeFromInitialToUpshift,
+	},
+	[AWCCFanBoostPhaseUpShift] = {
+		[AWCCFanBoostPhaseNormal] = & CanChangeFromUpShiftToNormal,
+		[AWCCFanBoostPhaseUpShift] = & CanChangeFromUpShiftToUpShift,
+	}
+};
+
+_Bool CanChangeFromDisabledToInitial (enum AWCCFan_t fan) {
+	return 1;
+}
+
+_Bool CanChangeFromInitialToUpshift (enum AWCCFan_t fan) {
+	return 1;
+}
+
+_Bool CanChangeFromUpShiftToNormal (enum AWCCFan_t fan) {
+	_Bool can = 0;
+	if (AWCCBoostPendingUp != Internal.BoostInfos [fan].BoostPendingState) {
+		if (1 == Internal.ConfigUtils.UpShiftTimePassed (fan)) {
+			can = 1;
+		}
+		else {
+			puts ("upshift time not passed");
+		}
+	}
+	else {
+		puts ("pending not satisfied");
+	}
+	return can;
+}
+
+_Bool CanChangeFromUpShiftToUpShift (enum AWCCFan_t fan) {
+	return 0;
+}
 
 void Manage (enum AWCCFan_t fan)
 {
-	for (int i = 0; i < AWCCFanBoostPhaseCount; i++) {
-		enum AWCCFanBoostPhase_t nextPhase = AWCCFanBoostPhaseManager [Internal.BoostInfos [fan].Phase].NextPhasePriority [i];
+	if (NULL != CanChangeFromTo [Internal.BoostInfos [fan].Phase]) {
+		for (int i = 0; i < AWCCFanBoostPhaseCount; i++) {
+			enum AWCCFanBoostPhase_t nextPhase = AWCCFanBoostPhaseManager [Internal.BoostInfos [fan].Phase].NextPhasePriority [i];
 
-		if (AWCCFanBoostPhaseNone != nextPhase) {
-			if (
-				   AWCCFanBoostPhaseManager [Internal.BoostInfos [fan].Phase].CanChangeTo (nextPhase, fan)
-				&& AWCCFanBoostPhaseManager [nextPhase].CanChangeFrom (Internal.BoostInfos [fan].Phase, fan)
-			) {
-				Internal.SetPhase (fan, nextPhase);
-				// NOTE: AWCCFanBoostPhaseManager [nextPhase].InitializePhase (fan) is called here
+			if (AWCCFanBoostPhaseNone != CanChangeFromTo [Internal.BoostInfos [fan].Phase] [nextPhase]) {
+				if ((* CanChangeFromTo [Internal.BoostInfos [fan].Phase] [nextPhase]) (fan)) {
+					Internal.SetPhase (fan, nextPhase);
+					// NOTE: AWCCFanBoostPhaseManager [nextPhase].InitializePhase (fan) is called here
+					break;
+				}
+			}
+			else {
 				break;
 			}
-		}
-		else {
-			break;
 		}
 	}
 

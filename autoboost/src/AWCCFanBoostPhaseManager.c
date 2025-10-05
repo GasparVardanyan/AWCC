@@ -3,9 +3,7 @@
 # include "AWCCConfig.h"
 # include "AWCCFanBoostManagerInternal.h"
 
-// TODO: read controls
 static _Bool CanChangeFromDisabledTo (enum AWCCFanBoostPhase_t, enum AWCCFan_t);
-// TODO: read controls
 static _Bool CanChangeToDisabledFrom (enum AWCCFanBoostPhase_t, enum AWCCFan_t);
 static void InitializePhase_Disabled (enum AWCCFan_t);
 static void ManagePhase_Disabled (enum AWCCFan_t);
@@ -35,14 +33,13 @@ static _Bool CanChangeToHelpingFrom (enum AWCCFanBoostPhase_t, enum AWCCFan_t);
 static void InitializePhase_Helping (enum AWCCFan_t);
 static void ManagePhase_Helping (enum AWCCFan_t);
 
+
 const struct AWCCFanBoostPhaseManager_t AWCCFanBoostPhaseManager [] = {
 	[AWCCFanBoostPhaseDisabled] = {
 		.NextPhasePriority = {
 			// AWCCFanBoostPhaseDisabled,
 			AWCCFanBoostPhaseInitial,
 		},
-		.CanChangeTo = & CanChangeFromDisabledTo,
-		.CanChangeFrom = & CanChangeToDisabledFrom,
 		.InitializePhase = & InitializePhase_Disabled,
 		.ManagePhase = & ManagePhase_Disabled,
 	},
@@ -51,33 +48,27 @@ const struct AWCCFanBoostPhaseManager_t AWCCFanBoostPhaseManager [] = {
 			AWCCFanBoostPhaseUpShift,
 			// AWCCFanBoostPhaseHelping,
 		},
-		.CanChangeTo = & CanChangeFromInitialTo,
-		.CanChangeFrom = & CanChangeToInitialFrom,
 		.InitializePhase = & InitializePhase_Initial,
 		.ManagePhase = & ManagePhase_Initial,
 	},
 	[AWCCFanBoostPhaseUpShift] = {
 		.NextPhasePriority = {
-			AWCCFanBoostPhaseDisabled,
-			AWCCFanBoostPhaseUpShift,
+			// AWCCFanBoostPhaseDisabled,
+			// AWCCFanBoostPhaseUpShift,
 			AWCCFanBoostPhaseNormal,
 			// AWCCFanBoostPhaseHelping,
 		},
-		.CanChangeTo = & CanChangeFromUpShiftTo,
-		.CanChangeFrom = & CanChangeToUpShiftFrom,
 		.InitializePhase = & InitializePhase_UpShift,
 		.ManagePhase = & ManagePhase_UpShift,
 	},
 	[AWCCFanBoostPhaseNormal] = {
 		.NextPhasePriority = {
-			AWCCFanBoostPhaseDisabled,
+			// AWCCFanBoostPhaseDisabled,
 			AWCCFanBoostPhaseUpShift,
 			// AWCCFanBoostPhaseNormal,
 			// AWCCFanBoostPhaseShiftToLower,
 			// AWCCFanBoostPhaseHelping,
 		},
-		.CanChangeTo = & CanChangeFromNormalTo,
-		.CanChangeFrom = & CanChangeToNormalFrom,
 		.InitializePhase = & InitializePhase_Normal,
 		.ManagePhase = & ManagePhase_Normal,
 	},
@@ -88,8 +79,6 @@ const struct AWCCFanBoostPhaseManager_t AWCCFanBoostPhaseManager [] = {
 	// 	// 	AWCCFanBoostPhaseShiftToLower,
 	// 	// 	AWCCFanBoostPhaseHelping,
 	// 	// },
-	// 	// .CanChangeTo = & CanChangeFromShiftToLowerTo,
-	// 	// .CanChangeFrom = & CanChangeToShiftToLowerFrom,
 	// 	// .InitializePhase = & InitializePhase_ShiftToLower,
 	// 	// .ManagePhase = & ManagePhase_ShiftToLower,
 	// },
@@ -98,8 +87,6 @@ const struct AWCCFanBoostPhaseManager_t AWCCFanBoostPhaseManager [] = {
 	// 		AWCCFanBoostPhaseDisabled,
 	// 		AWCCFanBoostPhaseUpShift,
 	// 	},
-	// 	.CanChangeTo = & CanChangeFromHelpingTo,
-	// 	.CanChangeFrom = & CanChangeToHelpingFrom,
 	// 	.InitializePhase = & InitializePhase_Helping,
 	// 	.ManagePhase = & ManagePhase_Helping,
 	// },

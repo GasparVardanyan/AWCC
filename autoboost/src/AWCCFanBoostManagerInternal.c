@@ -84,7 +84,7 @@ void SetBoost (enum AWCCFan_t fan, AWCCBoost_t boost)
 
 	Internal.BoostInfos [fan].Boost = boost;
 	Internal.BoostInfos [fan].BoostSetTime = Internal.CurrentTime;
-	AWCC.SetFanBoost (fan, boost);
+	// AWCC.SetFanBoost (fan, boost);
 }
 
 void SetBoostByInterval (enum AWCCFan_t fan, int interval)
