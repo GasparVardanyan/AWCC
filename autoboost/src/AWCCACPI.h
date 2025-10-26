@@ -16,6 +16,8 @@ struct AWCCACPI_t {
 	AWCCTemperature_t (* GetFanTemperature) (enum AWCCFan_t);
 	AWCCFanRpm_t (* GetFanRpm) (enum AWCCFan_t);
 
+	void (* EnableDGpu) (void);
+	void (* DisableDGpu) (void);
 } extern const AWCCACPI;
 
 # endif // __AWCC_ACPI_H

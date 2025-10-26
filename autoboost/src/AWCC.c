@@ -31,6 +31,9 @@ static const char * GetModeName (enum AWCCMode_t);
 
 static enum AWCCPowerState_t PowerState (void);
 
+static void EnableDGpu (void);
+static void DisableDGpu (void);
+
 static void Deinitialize (void);
 
 const struct AWCC_t AWCC = {
@@ -58,6 +61,9 @@ const struct AWCC_t AWCC = {
 	.GetModeName = & GetModeName,
 
 	.PowerState = & PowerState,
+
+	.EnableDGpu = & EnableDGpu,
+	.DisableDGpu = & DisableDGpu,
 
 	.Deinitialize = & Deinitialize,
 };
@@ -182,4 +188,14 @@ enum AWCCPowerState_t PowerState (void)
 	else {
 		return AWCCPowerStateAC;
 	}
+}
+
+void EnableDGpu (void)
+{
+	AWCCACPI.EnableDGpu ();
+}
+
+void DisableDGpu (void)
+{
+	AWCCACPI.DisableDGpu ();
 }

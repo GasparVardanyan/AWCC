@@ -53,6 +53,9 @@ struct AWCC_t {
 
 	enum AWCCPowerState_t (* PowerState) (void);
 
+	void (* EnableDGpu) (void);
+	void (* DisableDGpu) (void);
+
 	void (* Deinitialize) (void);
 } extern const AWCC;
 

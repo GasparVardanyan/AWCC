@@ -25,6 +25,9 @@ static unsigned int ParseHexValue (const char *);
 static AWCCTemperature_t GetFanTemperature (enum AWCCFan_t);
 static AWCCFanRpm_t GetFanRpm (enum AWCCFan_t);
 
+static void EnableDGpu (void);
+static void DisableDGpu (void);
+
 const struct AWCCACPI_t AWCCACPI = {
 	.Initialize = & Initialize,
 	.GetMode = & GetMode,
@@ -33,6 +36,8 @@ const struct AWCCACPI_t AWCCACPI = {
 	.SetFanBoost = & SetFanBoost,
 	.GetFanTemperature = & GetFanTemperature,
 	.GetFanRpm = & GetFanRpm,
+	.EnableDGpu = & EnableDGpu,
+	.DisableDGpu = & DisableDGpu,
 };
 
 struct {
@@ -47,6 +52,8 @@ struct {
 	const char * CmdSetCurrentMode;
 	const char * CmdGetTemperature;
 	const char * CmdGetFanRpm;
+	const char * EnableDGpu;
+	const char * DisableDGpu;
 
 	unsigned * ModeToHexMap;
 	enum AWCCMode_t * HexToModeMap;
@@ -74,6 +81,8 @@ struct {
 	.CmdSetCurrentMode   =   "\\_SB.%s.WMAX 0 0x15 {0x01, 0x%02x, 0x00, 0x00}"  ,
 	.CmdGetTemperature   =   "\\_SB.%s.WMAX 0 0x14 {0x04, 0x%02x, 0x00, 0x00}"  ,
 	.CmdGetFanRpm        =   "\\_SB.%s.WMAX 0 0x14 {0x05, 0x%02x, 0x00, 0x00}",
+	.EnableDGpu          =   "\\_SB.PCI0.PEG0.GFX0.DON",
+	.DisableDGpu         =   "\\_SB.PCI0.PEG0.GFX0.DOFF",
 
 	.ModeToHexMap = (unsigned []) {
 		[AWCCModeBalanced]       = 0xa0  ,
@@ -330,4 +339,14 @@ void SetMode (enum AWCCMode_t mode)
 		Internal.ModeToHexMap [mode]
 	);
 	Internal.Execute (cmd);
+}
+
+void EnableDGpu (void)
+{
+	Internal.Execute (Internal.EnableDGpu);
+}
+
+void DisableDGpu (void)
+{
+	Internal.Execute (Internal.DisableDGpu);
 }

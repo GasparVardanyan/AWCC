@@ -30,6 +30,7 @@ static void ManageMode (void);
 static void SetFanBoost (enum AWCCFan_t, int, _Bool);
 static void SetMode (int);
 static void HandleControl (void);
+static void ToggleDGpu (void);
 
 struct {
 	const struct AWCCConfig_t * Config;
@@ -84,6 +85,7 @@ struct {
 	void (* SetFanBoost) (enum AWCCFan_t, int, _Bool);
 	void (* SetMode) (int);
 	void (* HandleControl) (void);
+	void (* ToggleDGpu) (void);
 } static Internal = {
 	.Config = NULL,
 	.Configs = { NULL },
@@ -120,6 +122,7 @@ struct {
 	.SetFanBoost = & SetFanBoost,
 	.SetMode = & SetMode,
 	.HandleControl = & HandleControl,
+	.ToggleDGpu = & ToggleDGpu,
 };
 
 void Start (const struct AWCCConfig_t * config_ac, const struct AWCCConfig_t * config_bat, const struct AWCCSystemLogger_t * systemLogger, const struct AWCCControl_t * control)
@@ -136,6 +139,8 @@ void Start (const struct AWCCConfig_t * config_ac, const struct AWCCConfig_t * c
 	if (NULL != Internal.SystemLogger) {
 		mkdir (Internal.SystemLogger->Dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 	}
+
+	Internal.ToggleDGpu ();
 
 	while (1) {
 		Internal.BoostInfos [AWCCFanCPU].Temperature = AWCC.GetFanTemperature (AWCCFanCPU);
@@ -159,6 +164,7 @@ void Start (const struct AWCCConfig_t * config_ac, const struct AWCCConfig_t * c
 			Internal.ModeInfo.ModePhase = AWCCModePhaseInitial;
 			Internal.ModeInfo.ModeInterval = -1;
 			Internal.PowerState = powerState;
+			Internal.ToggleDGpu ();
 		}
 
 		Internal.CurrentTime = time (NULL);
@@ -504,5 +510,17 @@ void HandleControl (void)
 			AWCC.SetGpuBoost (autoControl.gpuBoost);
 			Internal.Control->ApproveGpuControlState (); // TODO: Don't forget about system logger
 		}
+	}
+}
+
+void ToggleDGpu (void)
+{
+	switch (Internal.PowerState) {
+		case AWCCPowerStateAC :
+			AWCC.EnableDGpu ();
+			break;
+		case AWCCPowerStateBAT :
+			AWCC.DisableDGpu ();
+			break;
 	}
 }
